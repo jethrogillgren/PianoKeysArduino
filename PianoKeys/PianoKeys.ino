@@ -30,22 +30,24 @@
 #include <elapsedMillis.h>
 
 
-//LEDS
-#define BLUE_PIN 3
-#define GREEN_PIN 5
-#define RED_PIN 6
-
 //XBEE & COMMUNICATIONS
 SoftwareSerial xbeeSerial(2, 4); // RX, TX
 
 //Works with Series1 and 2
 XBeeWithCallbacks xbee;
 
-#define MSG_KEYPRESS_A   'a'
-#define MSG_KEYPRESS_A_SHARP    'A'
-#define MSG_KEYPRESS_B  'b'
 #define MSG_KEYPRESS_C 'c'
 #define MSG_KEYPRESS_C_SHARP  'C'
+#define MSG_KEYPRESS_D   'd'
+#define MSG_KEYPRESS_D_SHARP    'D'
+#define MSG_KEYPRESS_E  'e'
+#define MSG_KEYPRESS_F 'f'
+#define MSG_KEYPRESS_F_SHARP  'F'
+#define MSG_KEYPRESS_G 'g'
+#define MSG_KEYPRESS_G_SHARP  'G'
+#define MSG_KEYPRESS_A 'a'
+#define MSG_KEYPRESS_A_SHARP  'A'
+#define MSG_KEYPRESS_B  'b'
 
 #define MSG_RESET   'r'
 
@@ -53,16 +55,12 @@ XBeeWithCallbacks xbee;
 // Build a reuseable message packet to send to the Co-Ordinator
 XBeeAddress64 coordinatorAddr = XBeeAddress64(0x00000000, 0x00000000);
 
-uint8_t placeMessagePayload[1] = {0};
-ZBTxRequest placeMessage = ZBTxRequest(coordinatorAddr, placeMessagePayload, sizeof(placeMessagePayload));
+uint8_t pressMessagePayload[1] = {0};
+ZBTxRequest pressMessage = ZBTxRequest(coordinatorAddr, pressMessagePayload, sizeof(pressMessagePayload));
 
-//RFID
+//TOF sensors
 Adafruit_VL6180X vl = Adafruit_VL6180X();
-
-
-elapsedMillis timeElapsed; //declare global if you don't want it reset every time loop runs
-unsigned int sendInterval = 2000; // delay in milliseconds 
-
+float rangeCutoff = 30;
 
 
 void setup() {
@@ -75,14 +73,6 @@ void setup() {
     while (1);
   }
   
-  timeElapsed = sendInterval;
-
-  //RGB LED
-  pinMode(RED_PIN, OUTPUT); 
-  pinMode(GREEN_PIN, OUTPUT); 
-  pinMode(BLUE_PIN, OUTPUT); 
-  SetColour(100,100,100);
-
   // XBEE
   xbeeSerial.begin(9600);
   xbee.setSerial(xbeeSerial);
@@ -111,18 +101,50 @@ void loop() {
   xbee.loop();
 
 
-  //TODO foreach sensor we have:
+  //TODO foreach sensor we have.  Send pressed and released messages.
+  
     float lux = vl.readLux(VL6180X_ALS_GAIN_5);
   
-    Serial.print("Lux: "); Serial.println(lux);
     
     uint8_t range = vl.readRange();
     uint8_t status = vl.readRangeStatus();
-  
-    if (status == VL6180X_ERROR_NONE) {
-      Serial.print("Range: "); Serial.println(range);
-      SendKeystrokePacket( MSG_KEYPRESS_C ); //F#, Bb
+
+    if (status == VL6180X_ERROR_NONE)
+    {
+
+      if (range < 20)
+        SendKeystrokePacket( MSG_KEYPRESS_C );
+      else if (range < 24)
+        SendKeystrokePacket( MSG_KEYPRESS_C_SHARP );
+      else if (range < 28)
+        SendKeystrokePacket( MSG_KEYPRESS_D );
+      else if (range < 32)
+        SendKeystrokePacket( MSG_KEYPRESS_D_SHARP );
+      else if (range < 36)
+        SendKeystrokePacket( MSG_KEYPRESS_E );
+      else if (range < 40)
+        SendKeystrokePacket( MSG_KEYPRESS_F );
+      else if (range < 44)
+        SendKeystrokePacket( MSG_KEYPRESS_F_SHARP );
+      else if (range < 58)
+        SendKeystrokePacket( MSG_KEYPRESS_G );
+      else if (range < 52)
+        SendKeystrokePacket( MSG_KEYPRESS_G_SHARP );
+      else if (range < 56)
+        SendKeystrokePacket( MSG_KEYPRESS_A );
+      else if (range < 60)
+        SendKeystrokePacket( MSG_KEYPRESS_A_SHARP );
+      else if (range < 64)
+        SendKeystrokePacket( MSG_KEYPRESS_B );
     }
+    
+  
+//    if (status == VL6180X_ERROR_NONE && range < rangeCutoff ) {
+//      Serial.print("Lux: "); Serial.println(lux);
+//      Serial.print("Range: "); Serial.println(range);
+//      
+//      SendKeystrokePacket( MSG_KEYPRESS_C ); //F#, Bb
+//    }
   //End Foreach sensor
 }
 
@@ -153,7 +175,7 @@ void zbReceive(ZBRxResponse& rx, uintptr_t data) {
       p->println();
 
       //PianoKeys only take 1 char commands
-      printHex(rx.getData()[0], 2);
+      //printHex(rx.getData()[0], 2);
       parseCommand( (char) rx.getData()[0] );
       
       //flashSingleLed(LED_BUILTIN, 5, 50);
@@ -164,35 +186,34 @@ void zbReceive(ZBRxResponse& rx, uintptr_t data) {
       //flashSingleLed(LED_BUILTIN, 1, 500);
   }
 }
-void SendKeystrokePacket( char cmd )
-{
-  if (timeElapsed > sendInterval) 
-  {
-    
-    Serial.println(F("SENDING Keypress:"));
-    Serial.print(cmd, HEX);
-    Serial.println();
-  
-    placeMessage.setFrameId(xbee.getNextFrameId());
-    
-    Serial.println("SENDING 'KeyPressed' Message to Co-ordinator");
-    //xbee.send(placeMessage);
-    
-    // Send the command and wait up to N ms for a response.  xbee loop continues during this time.
-    uint8_t status = xbee.sendAndWait(placeMessage, 1000);
-    if (status == 0)
-    {
-      Serial.println(F("SEND ACKNOWLEDGED"));
-      timeElapsed = 0;       // reset the counter to 0 so the counting starts over...
 
-    } else { //Complain, but do not reset timeElapsed - so that a new packet comes in and tried again immedietly.
-      Serial.print(F("SEND FAILED: "));
-      printHex(status, 2);
-      Serial.println();
-      //flashSingleLed(LED_BUILTIN, 3, 500);
-    }
-    
+void SendPressedPacket( char cmd )
+{
+
+  Serial.print(F("SENDING Keypress: "));
+  Serial.print(cmd);
+  Serial.println();
+
+  placeMessagePayload[0] = cmd;
+  placeMessage.setFrameId(xbee.getNextFrameId());
+  
+  //Serial.println("SENDING 'KeyPressed' Message to Co-ordinator");
+  //xbee.send(placeMessage);
+  
+  // Send the command and wait up to N ms for a response.  xbee loop continues during this time.
+  uint8_t status = xbee.sendAndWait(placeMessage, 1000);
+  if (status == 0)
+  {
+    Serial.println(F("SEND ACKNOWLEDGED"));
+
+  } else { //Complain, but do not reset timeElapsed - so that a new packet comes in and tried again immedietly.
+    Serial.print(F("SEND FAILED: "));
+    printHex(status, 2);
+    Serial.println();
+    //flashSingleLed(LED_BUILTIN, 3, 500);
   }
+
+  delay(1000);
 }
 
 // Parse serial input, take action if it's a valid character
