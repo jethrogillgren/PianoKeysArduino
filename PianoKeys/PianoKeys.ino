@@ -80,9 +80,9 @@ ZBTxRequest pressMessage = ZBTxRequest(coordinatorAddr, pressMessagePayload, siz
 #define address11 0x42
 
 ///* These Arduino pins must be wired to the IO0 pin of VL6180x */
-int enablePin0 = 11;
-int enablePin1 = 10;
-int enablePin2 = 9;
+int enablePin0 = 5;
+int enablePin1 = 6;
+int enablePin2 = 7;
 int enablePin3 = 8;
 int enablePin4 = 9;
 int enablePin5 = 10;
@@ -146,56 +146,31 @@ void loop() {
   // Continuously let xbee read packets and call callbacks.
   xbee.loop();
 
-
-  //TODO foreach sensor we have.  Send pressed and released messages.
-
-  // Read daylight (LUX)
-  //Serial.print("\tDaylight0: ");
-  //Serial.print(sensor0.readAmbientContinuous());
-  //if (sensor0.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-
-  //Serial.print("\tDaylight1: ");
-  //Serial.print(sensor1.readAmbientContinuous());
-  //if (sensor1.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-
-  //Serial.print("\tDaylight2: ");
-  //Serial.print(sensor1.readAmbientContinuous());
-  //if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-
-  Serial.println();
-
-  // Abstand in mm
-  Serial.print("\tDistance0: ");
-  Serial.print(sensor0.readRangeContinuousMillimeters());
-  if (sensor0.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-
-  Serial.print("\tDistance1: ");
-  Serial.print(sensor1.readRangeContinuousMillimeters());
-  if (sensor1.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-
+//  Serial.print("\tDistance0: ");
+//  Serial.print(sensor0.readRangeContinuousMillimeters());
+//  if (sensor0.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+//
+//  Serial.print("\tDistance1: ");
+//  Serial.print(sensor1.readRangeContinuousMillimeters());
+//  if (sensor1.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+//
 //  Serial.print("\tDistance2: ");
 //  Serial.print(sensor2.readRangeContinuousMillimeters());
 //  if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+//  Serial.println();
 
-// copy & paste as many sensors as you require
-
-  Serial.println();
-  
-  delay(100);
-
-
-//  if( sensor0.readRangeContinuousMillimeters() <= rangeCutoff )
-//    SendKeystrokePacket( MSG_KEYPRESS_C );
-//  if( sensor1.readRangeContinuousMillimeters() <= rangeCutoff )
-//    SendKeystrokePacket( MSG_KEYPRESS_C_SHARP );
-//  if( sensor2.readRangeContinuousMillimeters() <= rangeCutoff )
-//    SendKeystrokePacket( MSG_KEYPRESS_D );
-//  if( sensor3.readRangeContinuousMillimeters() <= rangeCutoff )
-//    SendKeystrokePacket( MSG_KEYPRESS_D_SHARP );
-//  if( sensor4.readRangeContinuousMillimeters() <= rangeCutoff )
-//    SendKeystrokePacket( MSG_KEYPRESS_E );
-//  if( sensor5.readRangeContinuousMillimeters() <= rangeCutoff )
-//    SendKeystrokePacket( MSG_KEYPRESS_F );
+  if( sensor0.readRangeContinuousMillimeters() <= rangeCutoff )
+    SendKeystrokePacket( MSG_KEYPRESS_C );
+  if( sensor1.readRangeContinuousMillimeters() <= rangeCutoff )
+    SendKeystrokePacket( MSG_KEYPRESS_C_SHARP );
+  if( sensor2.readRangeContinuousMillimeters() <= rangeCutoff )
+    SendKeystrokePacket( MSG_KEYPRESS_D );
+  if( sensor3.readRangeContinuousMillimeters() <= rangeCutoff )
+    SendKeystrokePacket( MSG_KEYPRESS_D_SHARP );
+  if( sensor4.readRangeContinuousMillimeters() <= rangeCutoff )
+    SendKeystrokePacket( MSG_KEYPRESS_E );
+  if( sensor5.readRangeContinuousMillimeters() <= rangeCutoff )
+    SendKeystrokePacket( MSG_KEYPRESS_F );
 //  if( sensor6.readRangeContinuousMillimeters() <= rangeCutoff )
 //    SendKeystrokePacket( MSG_KEYPRESS_F_SHARP );
 //  if( sensor7.readRangeContinuousMillimeters() <= rangeCutoff )
@@ -390,60 +365,12 @@ void SetSensorI2CAddresses()
   
   delay(1000);
   
-  // Sensor0
   SetSensorI2CAddress(0, enablePin0, &sensor0, address0 );
-//  Serial.println("Start Sensor 0");
-//  digitalWrite(enablePin0, HIGH);
-//  delay(50);
-//  sensor0.init();
-//  sensor0.configureDefault();
-//  sensor0.setAddress(address0);
-//  Serial.println(sensor0.readReg(0x212),HEX); // read I2C address
-//  sensor0.writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
-//  sensor0.writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
-//  sensor0.setTimeout(500);
-//  sensor0.stopContinuous();
-//  sensor0.setScaling(RANGE); // configure range or precision 1, 2 oder 3 mm
-//  delay(300);
-//  sensor0.startInterleavedContinuous(100);
-//  delay(100);
-  
-  // Sensor1
   SetSensorI2CAddress(1, enablePin1, &sensor1, address1 );
-  //Serial.println("Start Sensor 1");
-//  digitalWrite(enablePin1, HIGH);
-//  delay(50);
-//  sensor1.init();
-//  sensor1.configureDefault();
-//  sensor1.setAddress(address1);
-//  Serial.println(sensor1.readReg(0x212),HEX);
-//  sensor1.writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
-//  sensor1.writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
-//  sensor1.setTimeout(500);
-//  sensor1.stopContinuous();
-//  sensor1.setScaling(RANGE);
-//  delay(300);
-//  sensor1.startInterleavedContinuous(100);
-//  delay(100);
-
-  //Sensor2
   SetSensorI2CAddress(2, enablePin2, &sensor2, address2 );
-
-//  Serial.println("Start Sensor 2");
-//  digitalWrite(enablePin2, HIGH);
-//  delay(50);
-//  sensor2.init();
-//  sensor2.configureDefault();
-//  sensor2.setAddress(address2);
-//  Serial.println(sensor2.readReg(0x212),HEX);
-//  sensor2.writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
-//  sensor2.writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
-//  sensor2.setTimeout(500);
-//  sensor2.stopContinuous();
-//  sensor2.setScaling(RANGE);
-//  delay(300);
-//  sensor2.startInterleavedContinuous(100);
-    
+  SetSensorI2CAddress(3, enablePin3, &sensor3, address3 );
+  SetSensorI2CAddress(4, enablePin4, &sensor4, address4 );
+  SetSensorI2CAddress(5, enablePin5, &sensor5, address5 );
   delay(1000);
  
   Serial.println("Sensors ready! Start reading sensors in 3 seconds ...!");
