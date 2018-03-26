@@ -1,29 +1,35 @@
-/*
- * --------------------------------------------------------------------------------------------------------------------
- * Controls local LED from server messages, and lets server know if it has found a Tag.
- * --------------------------------------------------------------------------------------------------------------------
- * 
- * This is the moving KoalaCube object code.
- * Mesh Network of XBees.  Messages are CUBE_ID:char  with CUBE_ID as the destination or the sender.
- * 
- * Pin layout used:
- * -----------------------------------------------------------------------------------------
- *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
- *             Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
- * Signal      Pin          Pin           Pin       Pin        Pin              Pin
- * -----------------------------------------------------------------------------------------
- * RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST
- * SPI SS      SDA(SS)      10            53        D10        10               10
- * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16
- * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14
- * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
- * 
- * TODO - KoalaCube full pins
- */
 
-#include <SPI.h>
+///*
+// * --------------------------------------------------------------------------------------------------------------------
+// * Controls local LED from server messages, and lets server know if it has found a Tag.
+// * --------------------------------------------------------------------------------------------------------------------
+// * 
+// * This is the moving KoalaCube object code.
+// * Mesh Network of XBees.  Messages are CUBE_ID:char  with CUBE_ID as the destination or the sender.
+// * 
+// * Pin layout used:
+// * -----------------------------------------------------------------------------------------
+// *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
+// *             Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
+// * Signal      Pin          Pin           Pin       Pin        Pin              Pin
+// * -----------------------------------------------------------------------------------------
+// * RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST
+// * SPI SS      SDA(SS)      10            53        D10        10               10
+// * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16
+// * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14
+// * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
+// * 
+// * TODO - KoalaCube full pins
+// */
+//
+
 #include <Wire.h>
-#include "Adafruit_VL6180X.h"
+#include <VL6180X.h>
+
+#define RANGE 1
+
+
+
 #include <XBee.h>
 #include <SoftwareSerial.h>
 #include <Printers.h>
@@ -59,20 +65,60 @@ uint8_t pressMessagePayload[1] = {0};
 ZBTxRequest pressMessage = ZBTxRequest(coordinatorAddr, pressMessagePayload, sizeof(pressMessagePayload));
 
 //TOF sensors
-Adafruit_VL6180X vl = Adafruit_VL6180X();
+/* List of adresses for each sensor - after reset the address can be configured */
+#define address0 0x20
+#define address1 0x22
+#define address2 0x24
+#define address3 0x26
+#define address4 0x28
+#define address5 0x30
+#define address6 0x32
+#define address7 0x34
+#define address8 0x36
+#define address9 0x38
+#define address10 0x40
+#define address11 0x42
+
+///* These Arduino pins must be wired to the IO0 pin of VL6180x */
+int enablePin0 = 11;
+int enablePin1 = 10;
+int enablePin2 = 9;
+int enablePin3 = 8;
+int enablePin4 = 9;
+int enablePin5 = 10;
+int enablePin6 = 11;
+int enablePin7 = 12;
+int enablePin8 = 13;
+int enablePin9 = 14; //A0
+int enablePin10 = 15;//A1
+int enablePin11 = 16;//A2
+
+///* Create a new instance for each sensor */
+VL6180X sensor0;
+VL6180X sensor1;
+VL6180X sensor2;
+VL6180X sensor3;
+VL6180X sensor4;
+VL6180X sensor5;
+VL6180X sensor6;
+VL6180X sensor7;
+VL6180X sensor8;
+VL6180X sensor9;
+VL6180X sensor10;
+VL6180X sensor11;
+
 float rangeCutoff = 30;
 
 
 void setup() {
   Serial.begin(9600);   // Initialize serial communications with the PC
-  SPI.begin();      // Init SPI bus
+//  SPI.begin();      // Init SPI bus
+  Wire.begin();
 
-  //Distance Sensors
-  if (! vl.begin()) {
-    Serial.println("Failed to find sensor");
-    while (1);
-  }
   
+  //Distance Sensors
+  SetSensorI2CAddresses();
+
   // XBEE
   xbeeSerial.begin(9600);
   xbee.setSerial(xbeeSerial);
@@ -97,46 +143,105 @@ void setup() {
 
 void loop() {
 
-    // Continuously let xbee read packets and call callbacks.
+  // Continuously let xbee read packets and call callbacks.
   xbee.loop();
 
 
   //TODO foreach sensor we have.  Send pressed and released messages.
-  
-    float lux = vl.readLux(VL6180X_ALS_GAIN_5);
-  
-    
-    uint8_t range = vl.readRange();
-    uint8_t status = vl.readRangeStatus();
 
-    if (status == VL6180X_ERROR_NONE)
-    {
+  // Read daylight (LUX)
+  //Serial.print("\tDaylight0: ");
+  //Serial.print(sensor0.readAmbientContinuous());
+  //if (sensor0.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
 
-      if (range < 20)
-        SendKeystrokePacket( MSG_KEYPRESS_C );
-      else if (range < 24)
-        SendKeystrokePacket( MSG_KEYPRESS_C_SHARP );
-      else if (range < 28)
-        SendKeystrokePacket( MSG_KEYPRESS_D );
-      else if (range < 32)
-        SendKeystrokePacket( MSG_KEYPRESS_D_SHARP );
-      else if (range < 36)
-        SendKeystrokePacket( MSG_KEYPRESS_E );
-      else if (range < 40)
-        SendKeystrokePacket( MSG_KEYPRESS_F );
-      else if (range < 44)
-        SendKeystrokePacket( MSG_KEYPRESS_F_SHARP );
-      else if (range < 58)
-        SendKeystrokePacket( MSG_KEYPRESS_G );
-      else if (range < 52)
-        SendKeystrokePacket( MSG_KEYPRESS_G_SHARP );
-      else if (range < 56)
-        SendKeystrokePacket( MSG_KEYPRESS_A );
-      else if (range < 60)
-        SendKeystrokePacket( MSG_KEYPRESS_A_SHARP );
-      else if (range < 64)
-        SendKeystrokePacket( MSG_KEYPRESS_B );
-    }
+  //Serial.print("\tDaylight1: ");
+  //Serial.print(sensor1.readAmbientContinuous());
+  //if (sensor1.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+
+  //Serial.print("\tDaylight2: ");
+  //Serial.print(sensor1.readAmbientContinuous());
+  //if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+
+  Serial.println();
+
+  // Abstand in mm
+  Serial.print("\tDistance0: ");
+  Serial.print(sensor0.readRangeContinuousMillimeters());
+  if (sensor0.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+
+  Serial.print("\tDistance1: ");
+  Serial.print(sensor1.readRangeContinuousMillimeters());
+  if (sensor1.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+
+//  Serial.print("\tDistance2: ");
+//  Serial.print(sensor2.readRangeContinuousMillimeters());
+//  if (sensor2.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+
+// copy & paste as many sensors as you require
+
+  Serial.println();
+  
+  delay(100);
+
+
+//  if( sensor0.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_C );
+//  if( sensor1.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_C_SHARP );
+//  if( sensor2.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_D );
+//  if( sensor3.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_D_SHARP );
+//  if( sensor4.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_E );
+//  if( sensor5.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_F );
+//  if( sensor6.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_F_SHARP );
+//  if( sensor7.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_G );
+//  if( sensor8.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_G_SHARP );
+//  if( sensor9.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_A );
+//  if( sensor10.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_A_SHARP );
+//  if( sensor11.readRangeContinuousMillimeters() <= rangeCutoff )
+//    SendKeystrokePacket( MSG_KEYPRESS_B );
+
+//    float lux = vl.readLux(VL6180X_ALS_GAIN_5);
+//    
+//    uint8_t range = vl.readRange();
+//    uint8_t status = vl.readRangeStatus();
+//
+//    if (status == VL6180X_ERROR_NONE)
+//    {
+//
+//      if (range < 20)
+//        SendKeystrokePacket( MSG_KEYPRESS_C );
+//      else if (range < 24)
+//        SendKeystrokePacket( MSG_KEYPRESS_C_SHARP );
+//      else if (range < 28)
+//        SendKeystrokePacket( MSG_KEYPRESS_D );
+//      else if (range < 32)
+//        SendKeystrokePacket( MSG_KEYPRESS_D_SHARP );
+//      else if (range < 36)
+//        SendKeystrokePacket( MSG_KEYPRESS_E );
+//      else if (range < 40)
+//        SendKeystrokePacket( MSG_KEYPRESS_F );
+//      else if (range < 44)
+//        SendKeystrokePacket( MSG_KEYPRESS_F_SHARP );
+//      else if (range < 58)
+//        SendKeystrokePacket( MSG_KEYPRESS_G );
+//      else if (range < 52)
+//        SendKeystrokePacket( MSG_KEYPRESS_G_SHARP );
+//      else if (range < 56)
+//        SendKeystrokePacket( MSG_KEYPRESS_A );
+//      else if (range < 60)
+//        SendKeystrokePacket( MSG_KEYPRESS_A_SHARP );
+//      else if (range < 64)
+//        SendKeystrokePacket( MSG_KEYPRESS_B );
+//    }
     
   
 //    if (status == VL6180X_ERROR_NONE && range < rangeCutoff ) {
@@ -187,21 +292,21 @@ void zbReceive(ZBRxResponse& rx, uintptr_t data) {
   }
 }
 
-void SendPressedPacket( char cmd )
+void SendKeystrokePacket( char cmd )
 {
 
   Serial.print(F("SENDING Keypress: "));
   Serial.print(cmd);
   Serial.println();
 
-  placeMessagePayload[0] = cmd;
-  placeMessage.setFrameId(xbee.getNextFrameId());
+  pressMessagePayload[0] = cmd;
+  pressMessage.setFrameId(xbee.getNextFrameId());
   
   //Serial.println("SENDING 'KeyPressed' Message to Co-ordinator");
   //xbee.send(placeMessage);
   
   // Send the command and wait up to N ms for a response.  xbee loop continues during this time.
-  uint8_t status = xbee.sendAndWait(placeMessage, 1000);
+  uint8_t status = xbee.sendAndWait(pressMessage, 1000);
   if (status == 0)
   {
     Serial.println(F("SEND ACKNOWLEDGED"));
@@ -252,4 +357,124 @@ void printHex(int num, int precision) {
      Serial.print(tmp);
 }
 
+
+
+void SetSensorI2CAddresses()
+{
+  // Reset all connected sensors
+  pinMode(enablePin0,OUTPUT);
+  pinMode(enablePin1,OUTPUT);
+  pinMode(enablePin2,OUTPUT);
+  pinMode(enablePin3,OUTPUT);
+  pinMode(enablePin4,OUTPUT);
+  pinMode(enablePin5,OUTPUT);
+  pinMode(enablePin6,OUTPUT);
+  pinMode(enablePin7,OUTPUT);
+  pinMode(enablePin8,OUTPUT);
+  pinMode(enablePin9,OUTPUT);
+  pinMode(enablePin10,OUTPUT);
+  pinMode(enablePin11,OUTPUT);
+  
+  digitalWrite(enablePin0, LOW);
+  digitalWrite(enablePin1, LOW);
+  digitalWrite(enablePin2, LOW);
+  digitalWrite(enablePin3, LOW);
+  digitalWrite(enablePin4, LOW);
+  digitalWrite(enablePin5, LOW);
+  digitalWrite(enablePin6, LOW);  
+  digitalWrite(enablePin7, LOW);
+  digitalWrite(enablePin8, LOW);
+  digitalWrite(enablePin9, LOW);
+  digitalWrite(enablePin10, LOW);
+  digitalWrite(enablePin11, LOW);
+  
+  delay(1000);
+  
+  // Sensor0
+  SetSensorI2CAddress(0, enablePin0, &sensor0, address0 );
+//  Serial.println("Start Sensor 0");
+//  digitalWrite(enablePin0, HIGH);
+//  delay(50);
+//  sensor0.init();
+//  sensor0.configureDefault();
+//  sensor0.setAddress(address0);
+//  Serial.println(sensor0.readReg(0x212),HEX); // read I2C address
+//  sensor0.writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
+//  sensor0.writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
+//  sensor0.setTimeout(500);
+//  sensor0.stopContinuous();
+//  sensor0.setScaling(RANGE); // configure range or precision 1, 2 oder 3 mm
+//  delay(300);
+//  sensor0.startInterleavedContinuous(100);
+//  delay(100);
+  
+  // Sensor1
+  SetSensorI2CAddress(1, enablePin1, &sensor1, address1 );
+  //Serial.println("Start Sensor 1");
+//  digitalWrite(enablePin1, HIGH);
+//  delay(50);
+//  sensor1.init();
+//  sensor1.configureDefault();
+//  sensor1.setAddress(address1);
+//  Serial.println(sensor1.readReg(0x212),HEX);
+//  sensor1.writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
+//  sensor1.writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
+//  sensor1.setTimeout(500);
+//  sensor1.stopContinuous();
+//  sensor1.setScaling(RANGE);
+//  delay(300);
+//  sensor1.startInterleavedContinuous(100);
+//  delay(100);
+
+  //Sensor2
+  SetSensorI2CAddress(2, enablePin2, &sensor2, address2 );
+
+//  Serial.println("Start Sensor 2");
+//  digitalWrite(enablePin2, HIGH);
+//  delay(50);
+//  sensor2.init();
+//  sensor2.configureDefault();
+//  sensor2.setAddress(address2);
+//  Serial.println(sensor2.readReg(0x212),HEX);
+//  sensor2.writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
+//  sensor2.writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
+//  sensor2.setTimeout(500);
+//  sensor2.stopContinuous();
+//  sensor2.setScaling(RANGE);
+//  delay(300);
+//  sensor2.startInterleavedContinuous(100);
+    
+  delay(1000);
+ 
+  Serial.println("Sensors ready! Start reading sensors in 3 seconds ...!");
+  delay(3000);
+
+}
+
+void SetSensorI2CAddress( int i, int enablePin, VL6180X *sensor, int address )
+{
+
+  Serial.print("Start Sensor: ");
+  Serial.print(i);
+  Serial.print(" using pin ");
+  Serial.print(enablePin);
+  Serial.print(" as I2C Address ");
+  Serial.print( address);
+  Serial.println();
+  
+  digitalWrite(enablePin, HIGH);
+  delay(50);
+  sensor->init();
+  sensor->configureDefault();
+  sensor->setAddress(address);
+  Serial.println(sensor->readReg(0x212),HEX); // read I2C address
+  sensor->writeReg(VL6180X::SYSRANGE__MAX_CONVERGENCE_TIME, 30);
+  sensor->writeReg16Bit(VL6180X::SYSALS__INTEGRATION_PERIOD, 50);
+  sensor->setTimeout(500);
+  sensor->stopContinuous();
+  sensor->setScaling(RANGE); // configure range or precision 1, 2 oder 3 mm
+  delay(300);
+  sensor->startInterleavedContinuous(100);
+  delay(100);
+}
 
