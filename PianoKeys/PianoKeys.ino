@@ -277,23 +277,22 @@ void SendKeystrokePacket( char cmd )
   pressMessagePayload[0] = cmd;
   pressMessage.setFrameId(xbee.getNextFrameId());
   
-  //Serial.println("SENDING 'KeyPressed' Message to Co-ordinator");
-  //xbee.send(placeMessage);
+  xbee.send(pressMessage);
   
-  // Send the command and wait up to N ms for a response.  xbee loop continues during this time.
-  uint8_t status = xbee.sendAndWait(pressMessage, 1000);
-  if (status == 0)
-  {
-    Serial.println(F("SEND ACKNOWLEDGED"));
-
-  } else { //Complain, but do not reset timeElapsed - so that a new packet comes in and tried again immedietly.
-    Serial.print(F("SEND FAILED: "));
-    printHex(status, 2);
-    Serial.println();
-    //flashSingleLed(LED_BUILTIN, 3, 500);
-  }
-
-  delay(1000);
+//  // Send the command and wait up to N ms for a response.  xbee loop continues during this time.
+//  uint8_t status = xbee.sendAndWait(pressMessage, 1000);
+//  if (status == 0)
+//  {
+//    Serial.println(F("SEND ACKNOWLEDGED"));
+//
+//  } else { //Complain, but do not reset timeElapsed - so that a new packet comes in and tried again immedietly.
+//    Serial.print(F("SEND FAILED: "));
+//    printHex(status, 2);
+//    Serial.println();
+//    //flashSingleLed(LED_BUILTIN, 3, 500);
+//  }
+//
+//  delay(1000);
 }
 
 // Parse serial input, take action if it's a valid character
